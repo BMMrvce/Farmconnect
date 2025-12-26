@@ -408,7 +408,7 @@ async def list_requirements(current_user: dict = Depends(get_current_user)):
     response = supabase.table("plant_requirements").select("*").execute()
     return response.data
 
-@app.dashboard_stats")
+@app.get("/api/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     stats = {}
     
