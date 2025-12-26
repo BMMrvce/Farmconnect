@@ -416,6 +416,7 @@ const OwnerDashboard = () => {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle className="text-[#2d5016]">Create New Plot</DialogTitle>
+                        <DialogDescription className="text-[#5a7c3b]">Add a new plot to divide your farm</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleCreatePlot} className="space-y-4">
                         <div>
