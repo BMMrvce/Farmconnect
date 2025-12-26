@@ -537,6 +537,7 @@ const OwnerDashboard = () => {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle className="text-[#2d5016]">Add Plant Species</DialogTitle>
+                        <DialogDescription className="text-[#5a7c3b]">Add a new plant to your catalog</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleCreatePlant} className="space-y-4">
                         <div>
