@@ -70,8 +70,11 @@ const OwnerDashboard = () => {
       const requirementsRes = await axios.get(`${API_URL}/api/plant-requirements`);
       setPlantRequirements(requirementsRes.data);
       
-      // Set empty arrays for not-yet-implemented endpoints
-      setPlants([]);
+      // Fetch plants
+      const plantsRes = await axios.get(`${API_URL}/api/plants`);
+      setPlants(plantsRes.data);
+      
+      // Set empty array for inventory (not yet implemented)
       setInventory([]);
     } catch (error) {
       showError('Failed to fetch data');
