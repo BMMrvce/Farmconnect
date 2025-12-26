@@ -932,6 +932,7 @@ const OwnerDashboard = () => {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle className="text-[#2d5016]">Create Growth Cycle</DialogTitle>
+                          <DialogDescription className="text-[#5a7c3b]">Define plant lifecycle durations</DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleCreateCycle} className="space-y-4">
                           <div className="grid grid-cols-2 gap-4">
