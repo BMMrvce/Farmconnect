@@ -808,6 +808,7 @@ const OwnerDashboard = () => {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle className="text-[#2d5016]">Add Inventory Item</DialogTitle>
+                        <DialogDescription className="text-[#5a7c3b]">Add materials used for plant care</DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleCreateInventory} className="space-y-4">
                         <div>
