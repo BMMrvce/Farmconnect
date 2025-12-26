@@ -334,44 +334,222 @@ cat .env
 
 ## 🏃 Running the Application
 
-### Method 1: Using Supervisor (Recommended for Production)
+### Quick Start (Choose One Method)
 
-If you have supervisor installed:
+---
+
+### Method 1: Using Supervisor (Production/Server Environment)
+
+**Prerequisites:** Supervisor must be installed
 
 ```bash
-# Start both frontend and backend
+# Check if supervisor is installed
+supervisorctl --version
+
+# If not installed:
+# Ubuntu/Debian:
+sudo apt-get install supervisor
+# macOS:
+brew install supervisor
+```
+
+**Commands:**
+
+```bash
+# Start both services
 sudo supervisorctl start backend frontend
 
 # Check status
 sudo supervisorctl status
 
-# View logs
+# Expected output:
+# backend    RUNNING   pid 12345, uptime 0:00:05
+# frontend   RUNNING   pid 12346, uptime 0:00:05
+
+# View logs (real-time)
 sudo supervisorctl tail -f backend
 sudo supervisorctl tail -f frontend
 
+# View last 100 lines of logs
+sudo supervisorctl tail -100 backend
+sudo supervisorctl tail -100 frontend
+
 # Stop services
 sudo supervisorctl stop backend frontend
+
+# Restart services (after code changes)
+sudo supervisorctl restart backend frontend
+
+# Restart individual service
+sudo supervisorctl restart backend
+sudo supervisorctl restart frontend
+
+# Stop all services
+sudo supervisorctl stop all
+
+# Start all services
+sudo supervisorctl start all
 ```
 
-### Method 2: Manual Start (For Local Development)
+---
+
+### Method 2: Manual Start (Local Development - Recommended)
 
 **Terminal 1 - Backend:**
+
 ```bash
+# Navigate to backend directory
 cd backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Start FastAPI server with auto-reload
 uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+# Expected output:
+# INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+# INFO:     Started reloader process
+# INFO:     Started server process
+# INFO:     Waiting for application startup.
+# INFO:     Application startup complete.
+
+# Alternative: Start without auto-reload (production)
+uvicorn server:app --host 0.0.0.0 --port 8001
+
+# Alternative: Start with specific number of workers
+uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
 ```
 
 **Terminal 2 - Frontend:**
+
 ```bash
+# Navigate to frontend directory (from project root)
 cd frontend
+
+# Start React development server
 yarn start
+
+# Expected output:
+# Compiled successfully!
+# You can now view frontend in the browser.
+# Local:            http://localhost:3000
+# On Your Network:  http://192.168.x.x:3000
+
+# Alternative: Start with specific port
+PORT=3001 yarn start
+
+# Alternative: Build for production
+yarn build
+
+# Alternative: Serve production build
+yarn global add serve
+serve -s build -l 3000
 ```
 
-The application will be available at:
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:8001
-- **API Docs:** http://localhost:8001/docs (Swagger UI)
+---
+
+### Method 3: Using Docker (Optional)
+
+**If you have Docker installed:**
+
+```bash
+# Create Dockerfile for backend (create this file in /backend)
+cat > backend/Dockerfile << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+EOF
+
+# Create Dockerfile for frontend (create this file in /frontend)
+cat > frontend/Dockerfile << 'EOF'
+FROM node:18-alpine
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install
+COPY . .
+CMD ["yarn", "start"]
+EOF
+
+# Build and run with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop containers
+docker-compose down
+```
+
+---
+
+### Verification
+
+After starting the application, verify it's running:
+
+```bash
+# Check if backend is running
+curl http://localhost:8001/api/health
+
+# Expected response:
+# {"status":"healthy","service":"Farm Management System"}
+
+# Check if frontend is accessible
+curl -I http://localhost:3000
+
+# Expected response:
+# HTTP/1.1 200 OK
+
+# Check backend API documentation
+# Open in browser: http://localhost:8001/docs
+
+# Test authentication endpoint
+curl -X POST http://localhost:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+```
+
+---
+
+### Access URLs
+
+Once running, access the application at:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Frontend** | http://localhost:3000 | React application (User Interface) |
+| **Backend API** | http://localhost:8001 | FastAPI server (REST API) |
+| **API Docs (Swagger)** | http://localhost:8001/docs | Interactive API documentation |
+| **API Docs (ReDoc)** | http://localhost:8001/redoc | Alternative API documentation |
+| **Backend Health** | http://localhost:8001/api/health | Health check endpoint |
+
+---
+
+### Stopping the Application
+
+**If using Supervisor:**
+```bash
+sudo supervisorctl stop backend frontend
+```
+
+**If using Manual Start:**
+```bash
+# Press Ctrl+C in each terminal window
+# Or send SIGTERM signal
+kill $(lsof -t -i:8001)  # Stop backend
+kill $(lsof -t -i:3000)  # Stop frontend
+```
+
+**If using Docker:**
+```bash
+docker-compose down
+```
 
 ---
 
