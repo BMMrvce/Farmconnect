@@ -56,18 +56,23 @@ const OwnerDashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      // Only fetch endpoints that exist
+      // Fetch existing endpoints
       const farmsRes = await axios.get(`${API_URL}/api/farms`);
       setFarms(farmsRes.data);
       
       const plotsRes = await axios.get(`${API_URL}/api/plots`);
       setPlots(plotsRes.data);
       
+      // Fetch growth cycles and requirements
+      const cyclesRes = await axios.get(`${API_URL}/api/growth-cycles`);
+      setGrowthCycles(cyclesRes.data);
+      
+      const requirementsRes = await axios.get(`${API_URL}/api/plant-requirements`);
+      setPlantRequirements(requirementsRes.data);
+      
       // Set empty arrays for not-yet-implemented endpoints
       setPlants([]);
       setInventory([]);
-      setGrowthCycles([]);
-      setPlantRequirements([]);
     } catch (error) {
       showError('Failed to fetch data');
       console.error('Fetch error:', error);
