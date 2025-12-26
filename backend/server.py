@@ -388,6 +388,50 @@ async def delete_plot(plot_id: str, current_user: dict = Depends(require_role(["
     supabase.table("plots").delete().eq("id", plot_id).execute()
     return {"message": "Plot deleted successfully"}
 
+@app.get("/api/dashboard/stats")
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    stats = {}
+    
+    if current_user["role"] == "owner":
+        farms = supabase.table("farms").select("id", count="exact").eq("owner_id", current_user["id"]).execute()
+        stats["total_farms"] = farms.count or 0
+        
+        plots = supabase.table("plots").select("id", count="exact").execute()
+        stats["total_plots"] = plots.count or 0
+        
+        instances = supabase.table("plant_instances").select("id", count="exact").eq("status", "active").execute()
+        stats["active_plantings"] = instances.count or 0
+        
+        inventory = supabase.table("inventory").select("*").execute()
+        if inventory.data:
+            low_stock = [i for i in inventory.data if i["quantity"] <= i["reorder_level"]]
+            stats["low_stock_items"] = len(low_stock)
+        else:
+            stats["low_stock_items"] = 0
+    
+    elif current_user["role"] == "farmer":
+        assignments = supabase.table("farmer_assignments").select("plot_id", count="exact").eq("farmer_id", current_user["id"]).execute()
+        stats["assigned_plots"] = assignments.count or 0
+        
+        if assignments.data:
+            plot_ids = [a["plot_id"] for a in assignments.data]
+            instances = supabase.table("plant_instances").select("id").in_("plot_id", plot_ids).execute()
+            if instances.data:
+                instance_ids = [i["id"] for i in instances.data]
+                today = str(date.today())
+                tasks = supabase.table("schedules").select("id", count="exact").in_("plant_instance_id", instance_ids).eq("scheduled_for", today).eq("status", "pending").execute()
+                stats["tasks_today"] = tasks.count or 0
+            else:
+                stats["tasks_today"] = 0
+        else:
+            stats["tasks_today"] = 0
+    
+    elif current_user["role"] == "subscriber":
+        subs = supabase.table("subscriptions").select("plot_id", count="exact").eq("subscriber_id", current_user["id"]).eq("status", "active").execute()
+        stats["active_subscriptions"] = subs.count or 0
+    
+    return stats
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "service": "Farm Management System"}
