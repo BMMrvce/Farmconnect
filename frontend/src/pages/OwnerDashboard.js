@@ -930,8 +930,9 @@ const OwnerDashboard = () => {
                               <Input
                                 type="number"
                                 value={cycleForm.germination_days}
-                                onChange={(e) => setCycleForm({ ...cycleForm, germination_days: parseInt(e.target.value) })}
+                                onChange={(e) => setCycleForm({ ...cycleForm, germination_days: parseInt(e.target.value) || 0 })}
                                 className="border-[#8bc34a]/40"
+                                min="0"
                               />
                             </div>
                             <div>
@@ -939,8 +940,9 @@ const OwnerDashboard = () => {
                               <Input
                                 type="number"
                                 value={cycleForm.vegetative_days}
-                                onChange={(e) => setCycleForm({ ...cycleForm, vegetative_days: parseInt(e.target.value) })}
+                                onChange={(e) => setCycleForm({ ...cycleForm, vegetative_days: parseInt(e.target.value) || 0 })}
                                 className="border-[#8bc34a]/40"
+                                min="0"
                               />
                             </div>
                             <div>
@@ -948,8 +950,9 @@ const OwnerDashboard = () => {
                               <Input
                                 type="number"
                                 value={cycleForm.flowering_days}
-                                onChange={(e) => setCycleForm({ ...cycleForm, flowering_days: parseInt(e.target.value) })}
+                                onChange={(e) => setCycleForm({ ...cycleForm, flowering_days: parseInt(e.target.value) || 0 })}
                                 className="border-[#8bc34a]/40"
+                                min="0"
                               />
                             </div>
                             <div>
@@ -957,8 +960,9 @@ const OwnerDashboard = () => {
                               <Input
                                 type="number"
                                 value={cycleForm.fruiting_days}
-                                onChange={(e) => setCycleForm({ ...cycleForm, fruiting_days: parseInt(e.target.value) })}
+                                onChange={(e) => setCycleForm({ ...cycleForm, fruiting_days: parseInt(e.target.value) || 0 })}
                                 className="border-[#8bc34a]/40"
+                                min="0"
                               />
                             </div>
                           </div>
@@ -967,7 +971,8 @@ const OwnerDashboard = () => {
                             <Input
                               type="number"
                               value={cycleForm.total_growth_days}
-                              onChange={(e) => setCycleForm({ ...cycleForm, total_growth_days: parseInt(e.target.value) })}
+                              onChange={(e) => setCycleForm({ ...cycleForm, total_growth_days: parseInt(e.target.value) || 0 })}
+                              min="1"
                               required
                               className="border-[#8bc34a]/40"
                             />
