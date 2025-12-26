@@ -776,28 +776,381 @@ yarn install
 
 ## 🧪 Testing
 
-### Test the Backend API
+### Quick Testing Commands
 
 ```bash
-# Get token
-curl -X POST http://localhost:8001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"your@email.com","password":"yourpassword"}'
+# Set your backend URL (change if different)
+export API_URL="http://localhost:8001"
 
-# Test endpoints (use token from above)
-curl http://localhost:8001/api/farms \
-  -H "Authorization: Bearer <your-token>"
-
-# View API documentation
-open http://localhost:8001/docs
+# Or on Windows:
+set API_URL=http://localhost:8001
 ```
 
-### Test the Frontend
+---
 
-1. Register with different roles (Owner, Farmer, Subscriber)
-2. Test each role's dashboard
-3. Create test data in each tab
-4. Verify data appears correctly
+### Test 1: Health Check
+
+```bash
+# Test backend health
+curl $API_URL/api/health
+
+# Expected response:
+# {"status":"healthy","service":"Farm Management System"}
+
+# Test with verbose output
+curl -v $API_URL/api/health
+```
+
+---
+
+### Test 2: User Registration
+
+```bash
+# Register a new owner account
+curl -X POST $API_URL/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "owner@test.com",
+    "password": "password123",
+    "name": "Test Owner",
+    "role": "owner"
+  }'
+
+# Expected response:
+# {
+#   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "token_type": "bearer"
+# }
+
+# Register a farmer
+curl -X POST $API_URL/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "farmer@test.com",
+    "password": "password123",
+    "name": "Test Farmer",
+    "role": "farmer"
+  }'
+
+# Register a subscriber
+curl -X POST $API_URL/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "subscriber@test.com",
+    "password": "password123",
+    "name": "Test Subscriber",
+    "role": "subscriber"
+  }'
+```
+
+---
+
+### Test 3: Login and Get Token
+
+```bash
+# Login
+curl -X POST $API_URL/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "owner@test.com",
+    "password": "password123"
+  }'
+
+# Save token for subsequent requests
+export TOKEN=$(curl -s -X POST $API_URL/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@test.com","password":"password123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# Verify token is saved
+echo $TOKEN
+
+# Test authentication
+curl $API_URL/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### Test 4: Create Farm
+
+```bash
+# Create a farm
+curl -X POST $API_URL/api/farms \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "Green Valley Farm",
+    "location": "Maharashtra, India",
+    "description": "Organic vegetable farm"
+  }'
+
+# List all farms
+curl -s $API_URL/api/farms \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Save farm ID for next tests
+export FARM_ID=$(curl -s $API_URL/api/farms \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['id'] if data else '')")
+
+echo "Farm ID: $FARM_ID"
+```
+
+---
+
+### Test 5: Create Plot
+
+```bash
+# Create a plot
+curl -X POST $API_URL/api/plots \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{
+    \"farm_id\": \"$FARM_ID\",
+    \"name\": \"Plot A1\",
+    \"area_sqm\": 1000,
+    \"soil_type\": \"Loamy\"
+  }"
+
+# List all plots
+curl -s $API_URL/api/plots \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Save plot ID
+export PLOT_ID=$(curl -s $API_URL/api/plots \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['id'] if data else '')")
+
+echo "Plot ID: $PLOT_ID"
+```
+
+---
+
+### Test 6: Create Growth Cycle
+
+```bash
+# Create a growth cycle for tomatoes
+curl -X POST $API_URL/api/growth-cycles \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "germination_days": 7,
+    "vegetative_days": 21,
+    "flowering_days": 14,
+    "fruiting_days": 28,
+    "total_growth_days": 70
+  }'
+
+# List growth cycles
+curl -s $API_URL/api/growth-cycles \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Save cycle ID
+export CYCLE_ID=$(curl -s $API_URL/api/growth-cycles \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['id'] if data else '')")
+```
+
+---
+
+### Test 7: Create Plant
+
+```bash
+# Create a plant species
+curl -X POST $API_URL/api/plants \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{
+    \"name\": \"Tomato\",
+    \"scientific_name\": \"Solanum lycopersicum\",
+    \"growth_cycle_id\": \"$CYCLE_ID\",
+    \"notes\": \"Organic heirloom variety\"
+  }"
+
+# List plants
+curl -s $API_URL/api/plants \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Save plant ID
+export PLANT_ID=$(curl -s $API_URL/api/plants \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -c "import sys,json; data=json.load(sys.stdin); print(data[0]['id'] if data else '')")
+```
+
+---
+
+### Test 8: Create Inventory
+
+```bash
+# Create water inventory
+curl -X POST $API_URL/api/inventory \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "Water",
+    "unit": "ml",
+    "quantity": 50000,
+    "reorder_level": 10000
+  }'
+
+# Create panchagavya inventory
+curl -X POST $API_URL/api/inventory \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "Panchagavya",
+    "unit": "l",
+    "quantity": 100,
+    "reorder_level": 20
+  }'
+
+# List inventory
+curl -s $API_URL/api/inventory \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+---
+
+### Test 9: Create Plant Instance
+
+```bash
+# Create a plant instance (actual planting)
+curl -X POST $API_URL/api/plant-instances \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{
+    \"plot_id\": \"$PLOT_ID\",
+    \"plant_id\": \"$PLANT_ID\",
+    \"planted_on\": \"2025-12-20\",
+    \"count\": 50
+  }"
+
+# List plant instances
+curl -s $API_URL/api/plant-instances \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
+
+---
+
+### Test 10: Get Dashboard Stats
+
+```bash
+# Get dashboard statistics
+curl -s $API_URL/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Expected response shows counts of farms, plots, etc.
+```
+
+---
+
+### Complete Test Script
+
+Save this as `test_api.sh`:
+
+```bash
+#!/bin/bash
+
+# Farm Management System API Test Script
+
+API_URL="http://localhost:8001"
+
+echo "=========================================="
+echo "  Farm Management System API Tests"
+echo "=========================================="
+echo ""
+
+# 1. Health Check
+echo "1. Testing Health Check..."
+curl -s $API_URL/api/health | python3 -m json.tool
+echo ""
+
+# 2. Register
+echo "2. Registering new owner..."
+REGISTER_RESP=$(curl -s -X POST $API_URL/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"testowner@farm.com","password":"password123","name":"Test Owner","role":"owner"}')
+echo $REGISTER_RESP | python3 -m json.tool
+echo ""
+
+# 3. Login and get token
+echo "3. Logging in..."
+TOKEN=$(echo $REGISTER_RESP | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+echo "Token obtained: ${TOKEN:0:50}..."
+echo ""
+
+# 4. Create Farm
+echo "4. Creating farm..."
+FARM_RESP=$(curl -s -X POST $API_URL/api/farms \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"Test Farm","location":"Test Location"}')
+echo $FARM_RESP | python3 -m json.tool
+FARM_ID=$(echo $FARM_RESP | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo ""
+
+# 5. Create Plot
+echo "5. Creating plot..."
+curl -s -X POST $API_URL/api/plots \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{\"farm_id\":\"$FARM_ID\",\"name\":\"Plot A1\",\"area_sqm\":1000}" | python3 -m json.tool
+echo ""
+
+# 6. Get Dashboard Stats
+echo "6. Getting dashboard stats..."
+curl -s $API_URL/api/dashboard/stats \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+echo ""
+
+echo "=========================================="
+echo "  All Tests Completed!"
+echo "=========================================="
+```
+
+Make it executable and run:
+
+```bash
+chmod +x test_api.sh
+./test_api.sh
+```
+
+---
+
+### Frontend Testing
+
+```bash
+# Open the application in browser
+open http://localhost:3000
+
+# Or use curl to check if frontend is serving
+curl -I http://localhost:3000
+
+# Test specific routes
+open http://localhost:3000/login
+open http://localhost:3000/register
+open http://localhost:3000/dashboard
+```
+
+---
+
+### Testing Checklist
+
+- [ ] Backend health check responds
+- [ ] Can register new user
+- [ ] Can login and receive token
+- [ ] Can create farm
+- [ ] Can create plot
+- [ ] Can create growth cycle
+- [ ] Can create plant
+- [ ] Can create inventory
+- [ ] Can create plant instance
+- [ ] Dashboard stats display correctly
+- [ ] Frontend loads without errors
+- [ ] Can navigate between tabs
+- [ ] Forms submit successfully
+- [ ] Data refreshes after creation
 
 ---
 
