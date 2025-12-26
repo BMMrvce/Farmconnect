@@ -227,20 +227,45 @@ psql "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:54
 
 ### Backend Configuration
 
-Edit `/backend/.env`:
+**Step 1: Navigate to backend directory**
+
+```bash
+cd backend
+```
+
+**Step 2: Create/Edit .env file**
+
+```bash
+# Create .env file (if it doesn't exist)
+touch .env
+
+# Or on Windows
+type nul > .env
+
+# Edit the file with your favorite editor
+nano .env
+# or
+vim .env
+# or
+code .env  # VS Code
+```
+
+**Step 3: Add configuration**
+
+Copy and paste this into `/backend/.env`:
 
 ```env
-# Supabase Configuration (REQUIRED)
-SUPABASE_URL=https://your-project.supabase.co
+# Supabase Configuration (REQUIRED - Replace with your values)
+SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-anon-key-here
-SUPABASE_SERVICE_KEY=your-service-key-here
+SUPABASE_SERVICE_KEY=your-service-role-key-here
 
-# JWT Configuration (Can keep defaults)
-JWT_SECRET_KEY=your-secret-key-change-in-production
+# JWT Configuration (You can keep these defaults)
+JWT_SECRET_KEY=farm_management_secret_key_change_in_production_2024
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
-# MongoDB (Not used, but kept for compatibility)
+# MongoDB (Not used, but kept for compatibility - DO NOT CHANGE)
 MONGO_URL="mongodb://localhost:27017"
 DB_NAME="test_database"
 
@@ -248,16 +273,61 @@ DB_NAME="test_database"
 CORS_ORIGINS="*"
 ```
 
+**Step 4: Verify configuration**
+
+```bash
+# Check if .env file is created and readable
+cat .env
+
+# Verify environment variables are set
+python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('SUPABASE_URL:', os.getenv('SUPABASE_URL'))"
+```
+
+---
+
 ### Frontend Configuration
 
-Edit `/frontend/.env`:
+**Step 1: Navigate to frontend directory**
+
+```bash
+# From project root
+cd frontend
+```
+
+**Step 2: Create/Edit .env file**
+
+```bash
+# Create .env file (if it doesn't exist)
+touch .env
+
+# Or on Windows
+type nul > .env
+```
+
+**Step 3: Add configuration**
+
+Copy and paste this into `/frontend/.env`:
 
 ```env
-# Backend API URL (Keep as is for local development)
+# For Local Development
 REACT_APP_BACKEND_URL=http://localhost:8001
 
-# Or use the production URL if deployed:
+# For Production/Deployed Backend (uncomment if needed)
 # REACT_APP_BACKEND_URL=https://your-app.preview.emergentagent.com
+
+# Additional React Environment Variables (optional)
+WDS_SOCKET_PORT=443
+ENABLE_HEALTH_CHECK=false
+```
+
+**Step 4: Verify configuration**
+
+```bash
+# Check if .env file is created
+cat .env
+
+# Verify variable is accessible (after starting the app)
+# The value will be available as process.env.REACT_APP_BACKEND_URL in React
 ```
 
 ---
