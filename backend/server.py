@@ -388,7 +388,27 @@ async def delete_plot(plot_id: str, current_user: dict = Depends(require_role(["
     supabase.table("plots").delete().eq("id", plot_id).execute()
     return {"message": "Plot deleted successfully"}
 
-@app.get("/api/dashboard/stats")
+@app.post("/api/growth-cycles", response_model=GrowthCycleResponse)
+async def create_growth_cycle(cycle: GrowthCycleCreate, current_user: dict = Depends(require_role(["owner"]))):
+    response = supabase.table("growth_cycles").insert(cycle.model_dump()).execute()
+    return response.data[0]
+
+@app.get("/api/growth-cycles", response_model=List[GrowthCycleResponse])
+async def list_growth_cycles(current_user: dict = Depends(get_current_user)):
+    response = supabase.table("growth_cycles").select("*").execute()
+    return response.data
+
+@app.post("/api/plant-requirements", response_model=PlantRequirementResponse)
+async def create_requirement(req: PlantRequirementCreate, current_user: dict = Depends(require_role(["owner"]))):
+    response = supabase.table("plant_requirements").insert(req.model_dump()).execute()
+    return response.data[0]
+
+@app.get("/api/plant-requirements", response_model=List[PlantRequirementResponse])
+async def list_requirements(current_user: dict = Depends(get_current_user)):
+    response = supabase.table("plant_requirements").select("*").execute()
+    return response.data
+
+@app.dashboard_stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     stats = {}
     
