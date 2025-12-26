@@ -1243,4 +1243,322 @@ For issues or questions:
 
 ---
 
+## 🔧 Command Reference
+
+### Essential Commands Cheat Sheet
+
+#### Project Setup
+```bash
+# Clone and setup
+git clone <repo-url> && cd farm-management-system
+cd backend && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+cd ../frontend && yarn install
+
+# Configure environment
+cp backend/.env.example backend/.env  # Then edit with your values
+cp frontend/.env.example frontend/.env
+```
+
+#### Running Services
+```bash
+# Terminal 1 - Backend
+cd backend && source venv/bin/activate && uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+# Terminal 2 - Frontend
+cd frontend && yarn start
+
+# Or with supervisor
+sudo supervisorctl start backend frontend
+```
+
+#### Database Operations
+```bash
+# Connect to Supabase
+psql "postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres"
+
+# Execute schema
+psql "postgresql://..." -f database_schema.sql
+
+# List tables
+\dt
+
+# Describe table
+\d users
+
+# Query data
+SELECT * FROM users LIMIT 5;
+```
+
+#### Testing Commands
+```bash
+# Quick health check
+curl http://localhost:8001/api/health
+
+# Get auth token
+export TOKEN=$(curl -s -X POST http://localhost:8001/api/auth/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"password123"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# Test authenticated endpoint
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8001/api/farms
+```
+
+#### Package Management
+```bash
+# Backend - Add new package
+cd backend && pip install <package-name> && pip freeze > requirements.txt
+
+# Frontend - Add new package
+cd frontend && yarn add <package-name>
+
+# Update packages
+pip install --upgrade -r requirements.txt  # Backend
+yarn upgrade  # Frontend
+```
+
+#### Logs and Debugging
+```bash
+# View supervisor logs
+sudo supervisorctl tail -f backend
+sudo supervisorctl tail -f frontend
+
+# Check service status
+sudo supervisorctl status
+
+# Backend logs (if running manually)
+# Output is in terminal where uvicorn is running
+
+# Check for errors
+grep -i error /var/log/supervisor/backend*.log
+```
+
+#### Git Operations (if using version control)
+```bash
+# Initialize repository
+git init
+git add .
+git commit -m "Initial commit"
+
+# Create .gitignore
+cat > .gitignore << EOF
+# Python
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node
+node_modules/
+build/
+.env.local
+
+# IDE
+.vscode/
+.idea/
+EOF
+
+# Push to remote
+git remote add origin <your-repo-url>
+git push -u origin main
+```
+
+#### Cleanup Commands
+```bash
+# Stop all services
+sudo supervisorctl stop all
+
+# Clean Python cache
+find . -type d -name __pycache__ -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+
+# Clean Node modules and reinstall
+cd frontend && rm -rf node_modules yarn.lock && yarn install
+
+# Reset virtual environment
+cd backend && rm -rf venv && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+```
+
+#### Port Management
+```bash
+# Check what's running on ports
+lsof -i :8001  # Backend
+lsof -i :3000  # Frontend
+
+# Kill process on specific port
+kill -9 $(lsof -t -i:8001)
+kill -9 $(lsof -t -i:3000)
+
+# Or on Windows
+netstat -ano | findstr :8001
+taskkill /PID <PID> /F
+```
+
+#### Environment Verification
+```bash
+# Check Python version
+python --version  # Should be 3.11+
+
+# Check Node version
+node --version  # Should be 18+
+
+# Check Yarn version
+yarn --version
+
+# Check pip packages
+pip list
+
+# Check Node packages
+yarn list --depth=0
+
+# Verify environment variables
+cd backend && python -c "from dotenv import load_dotenv; import os; load_dotenv(); print('Backend env loaded:', os.getenv('SUPABASE_URL') is not None)"
+```
+
+#### Quick Development Workflow
+```bash
+# 1. Pull latest changes (if using git)
+git pull origin main
+
+# 2. Update dependencies
+cd backend && pip install -r requirements.txt
+cd ../frontend && yarn install
+
+# 3. Restart services
+sudo supervisorctl restart backend frontend
+
+# 4. Check status
+sudo supervisorctl status
+
+# 5. View logs for errors
+sudo supervisorctl tail -100 backend
+```
+
+#### Production Deployment
+```bash
+# Build frontend for production
+cd frontend && yarn build
+
+# Test production build locally
+cd build && python -m http.server 3000
+
+# Create production requirements (no dev dependencies)
+pip freeze | grep -v "@" > requirements-prod.txt
+
+# Run backend in production mode
+uvicorn server:app --host 0.0.0.0 --port 8001 --workers 4
+```
+
+#### Backup and Restore
+```bash
+# Backup Supabase database
+pg_dump "postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres" > backup_$(date +%Y%m%d).sql
+
+# Restore from backup
+psql "postgresql://..." < backup_20251226.sql
+
+# Backup .env files
+cp backend/.env backend/.env.backup
+cp frontend/.env frontend/.env.backup
+
+# Backup entire project (excluding dependencies)
+tar -czf farm-management-backup-$(date +%Y%m%d).tar.gz \
+  --exclude='node_modules' \
+  --exclude='venv' \
+  --exclude='__pycache__' \
+  --exclude='.git' \
+  .
+```
+
+#### Troubleshooting Commands
+```bash
+# Check if ports are accessible
+nc -zv localhost 8001  # Backend
+nc -zv localhost 3000  # Frontend
+
+# Test database connection
+python3 << EOF
+from supabase import create_client
+import os
+from dotenv import load_dotenv
+load_dotenv('backend/.env')
+client = create_client(os.getenv('SUPABASE_URL'), os.getenv('SUPABASE_SERVICE_KEY'))
+print('Connection successful!')
+EOF
+
+# Check CORS headers
+curl -I -H "Origin: http://localhost:3000" http://localhost:8001/api/health
+
+# Validate JSON API responses
+curl -s http://localhost:8001/api/health | python3 -m json.tool
+
+# Check memory usage
+ps aux | grep -E 'uvicorn|node'
+
+# Check disk space
+df -h
+```
+
+---
+
+## 📝 Quick Start Script
+
+Create a file `start.sh` in project root:
+
+```bash
+#!/bin/bash
+
+# Farm Management System - Quick Start Script
+
+echo "🌾 Starting Farm Management System..."
+echo ""
+
+# Check if virtual environment exists
+if [ ! -d "backend/venv" ]; then
+    echo "Creating virtual environment..."
+    cd backend && python -m venv venv && cd ..
+fi
+
+# Check if node_modules exists
+if [ ! -d "frontend/node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    cd frontend && yarn install && cd ..
+fi
+
+# Start backend
+echo "Starting backend on port 8001..."
+cd backend
+source venv/bin/activate
+uvicorn server:app --host 0.0.0.0 --port 8001 --reload &
+BACKEND_PID=$!
+cd ..
+
+# Wait for backend to start
+sleep 3
+
+# Start frontend
+echo "Starting frontend on port 3000..."
+cd frontend
+yarn start &
+FRONTEND_PID=$!
+cd ..
+
+echo ""
+echo "✅ Services started!"
+echo "   Backend:  http://localhost:8001"
+echo "   Frontend: http://localhost:3000"
+echo "   API Docs: http://localhost:8001/docs"
+echo ""
+echo "Press Ctrl+C to stop all services"
+
+# Wait for Ctrl+C
+trap "kill $BACKEND_PID $FRONTEND_PID; exit" INT
+wait
+```
+
+Make it executable and run:
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+---
+
 **Happy Farming! 🌾**
