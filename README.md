@@ -106,6 +106,7 @@ git clone <repository-url>
 cd farm-management-system
 
 # Or download and extract the ZIP file
+cd path/to/extracted/folder
 ```
 
 ### 2. Backend Setup
@@ -125,16 +126,25 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Verify installation
+python -c "import fastapi; print('FastAPI installed successfully')"
 ```
 
 ### 3. Frontend Setup
 
 ```bash
-# Navigate to frontend directory
+# Navigate to frontend directory (from project root)
 cd frontend
 
-# Install dependencies
+# Install dependencies using yarn
 yarn install
+
+# Verify installation
+yarn --version
+
+# Optional: Check for outdated packages
+yarn outdated
 ```
 
 ---
@@ -155,39 +165,61 @@ yarn install
 ### Step 2: Get API Credentials
 
 1. In your Supabase dashboard, go to **Settings** → **API**
-2. Copy the following:
-   - **Project URL** (e.g., `https://xxxxx.supabase.co`)
-   - **anon public** key
-   - **service_role** key (keep this secret!)
+2. Copy the following (you'll need these for .env configuration):
+   
+   ```bash
+   # Note down these values:
+   Project URL: https://xxxxx.supabase.co
+   anon public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
 
 ### Step 3: Execute Database Schema
 
+**Option A: Using Supabase Dashboard (Recommended)**
+
 1. In Supabase dashboard, go to **SQL Editor**
 2. Click **"New Query"**
-3. Open `/database_schema.sql` from the project root
-4. Copy the entire content and paste into SQL Editor
+3. Copy the entire content from `/database_schema.sql`
+4. Paste into SQL Editor
 5. Click **"Run"** or press `Ctrl+Enter`
 6. Wait for success message
 
+**Option B: Using Command Line (if you have psql installed)**
+
+```bash
+# From project root directory
+cd /path/to/farm-management-system
+
+# Connect to Supabase and execute schema
+# Replace with your actual connection string from Supabase
+psql "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres" -f database_schema.sql
+```
+
 ### Step 4: Verify Tables Created
 
+**Using Supabase Dashboard:**
 1. Go to **Table Editor** in Supabase
-2. You should see 15 tables:
-   - users
-   - farms
-   - plots
-   - subscriptions
-   - farmer_assignments
-   - growth_cycles
-   - plant_requirements
-   - plants
-   - plant_instances
-   - schedule_templates
-   - schedules
-   - checklist_entries
-   - inventory
-   - inventory_transactions
-   - harvest_records
+2. Verify all 15 tables exist
+
+**Using Command Line:**
+
+```bash
+# Connect to database
+psql "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+
+# List all tables
+\dt
+
+# You should see:
+# users, farms, plots, subscriptions, farmer_assignments,
+# growth_cycles, plant_requirements, plants, plant_instances,
+# schedule_templates, schedules, checklist_entries,
+# inventory, inventory_transactions, harvest_records
+
+# Exit psql
+\q
+```
 
 ---
 
