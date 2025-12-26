@@ -425,6 +425,133 @@ async def get_plant(plant_id: str, current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Plant not found")
     return response.data[0]
 
+# ==================== PLANT INSTANCES ====================
+
+def calculate_growth_status(planted_on: date, growth_cycle_id: str):
+    """Calculate current growth stage and days since planting"""
+    if not growth_cycle_id:
+        return None, None, None
+    
+    cycle_response = supabase.table("growth_cycles").select("*").eq("id", growth_cycle_id).execute()
+    if not cycle_response.data:
+        return None, None, None
+    
+    cycle = cycle_response.data[0]
+    days_since = (date.today() - planted_on).days
+    
+    if days_since <= cycle["germination_days"]:
+        stage = "germination"
+    elif days_since <= cycle["germination_days"] + cycle["vegetative_days"]:
+        stage = "vegetative"
+    elif days_since <= cycle["germination_days"] + cycle["vegetative_days"] + cycle["flowering_days"]:
+        stage = "flowering"
+    else:
+        stage = "fruiting"
+    
+    expected_harvest = planted_on + timedelta(days=cycle["total_growth_days"])
+    
+    return stage, days_since, expected_harvest
+
+@app.post("/api/plant-instances", response_model=PlantInstanceResponse)
+async def create_plant_instance(instance: PlantInstanceCreate, current_user: dict = Depends(require_role(["owner"]))):
+    plot = supabase.table("plots").select("farm_id").eq("id", instance.plot_id).execute()
+    if not plot.data:
+        raise HTTPException(status_code=404, detail="Plot not found")
+    
+    plant = supabase.table("plants").select("*").eq("id", instance.plant_id).execute()
+    if not plant.data:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    
+    growth_cycle_id = plant.data[0].get("growth_cycle_id")
+    stage, days_since, expected_harvest = calculate_growth_status(instance.planted_on, growth_cycle_id)
+    
+    new_instance = {
+        "plot_id": instance.plot_id,
+        "plant_id": instance.plant_id,
+        "planted_on": str(instance.planted_on),
+        "count": instance.count,
+        "status": "active",
+        "current_growth_stage": stage,
+        "days_since_planting": days_since,
+        "expected_harvest_date": str(expected_harvest) if expected_harvest else None
+    }
+    
+    response = supabase.table("plant_instances").insert(new_instance).execute()
+    created_instance = response.data[0]
+    
+    logger.info(f"Plant instance created: {created_instance['id']}")
+    
+    return created_instance
+
+@app.get("/api/plant-instances", response_model=List[PlantInstanceResponse])
+async def list_plant_instances(plot_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = supabase.table("plant_instances").select("*")
+    if plot_id:
+        query = query.eq("plot_id", plot_id)
+    response = query.execute()
+    
+    for instance in response.data:
+        if instance.get("planted_on"):
+            planted_date = datetime.strptime(instance["planted_on"], "%Y-%m-%d").date()
+            plant = supabase.table("plants").select("growth_cycle_id").eq("id", instance["plant_id"]).execute()
+            if plant.data and plant.data[0].get("growth_cycle_id"):
+                stage, days_since, expected_harvest = calculate_growth_status(
+                    planted_date, 
+                    plant.data[0]["growth_cycle_id"]
+                )
+                instance["current_growth_stage"] = stage
+                instance["days_since_planting"] = days_since
+                instance["expected_harvest_date"] = str(expected_harvest) if expected_harvest else None
+    
+    return response.data
+
+@app.get("/api/plant-instances/{instance_id}", response_model=PlantInstanceResponse)
+async def get_plant_instance(instance_id: str, current_user: dict = Depends(get_current_user)):
+    response = supabase.table("plant_instances").select("*").eq("id", instance_id).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Plant instance not found")
+    return response.data[0]
+
+# ==================== INVENTORY ====================
+
+@app.post("/api/inventory", response_model=InventoryResponse)
+async def create_inventory(item: InventoryCreate, current_user: dict = Depends(require_role(["owner"]))):
+    response = supabase.table("inventory").insert(item.model_dump()).execute()
+    return response.data[0]
+
+@app.get("/api/inventory", response_model=List[InventoryResponse])
+async def list_inventory(current_user: dict = Depends(get_current_user)):
+    response = supabase.table("inventory").select("*").execute()
+    return response.data
+
+@app.put("/api/inventory/{inventory_id}")
+async def update_inventory(inventory_id: str, quantity: float, reason: str, current_user: dict = Depends(require_role(["owner"]))):
+    inv = supabase.table("inventory").select("*").eq("id", inventory_id).execute()
+    if not inv.data:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    
+    current_qty = float(inv.data[0]["quantity"])
+    new_qty = current_qty + quantity
+    
+    if new_qty < 0:
+        raise HTTPException(status_code=400, detail="Insufficient inventory")
+    
+    supabase.table("inventory").update({"quantity": new_qty}).eq("id", inventory_id).execute()
+    
+    supabase.table("inventory_transactions").insert({
+        "inventory_id": inventory_id,
+        "change": quantity,
+        "reason": reason
+    }).execute()
+    
+    return {"message": "Inventory updated", "new_quantity": new_qty}
+
+@app.get("/api/inventory/low-stock", response_model=List[InventoryResponse])
+async def get_low_stock(current_user: dict = Depends(require_role(["owner"]))):
+    response = supabase.table("inventory").select("*").execute()
+    low_stock = [item for item in response.data if item["quantity"] <= item["reorder_level"]]
+    return low_stock
+
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     stats = {}
