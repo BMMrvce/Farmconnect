@@ -390,8 +390,711 @@ const OwnerDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Continue with other tabs in next part... */}
-          
+          {/* PLOTS TAB */}
+          <TabsContent value="plots">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-2xl text-[#2d5016]">Plots</CardTitle>
+                    <CardDescription className="text-[#5a7c3b]">Manage farm plots and divisions</CardDescription>
+                  </div>
+                  <Dialog open={plotDialog} onOpenChange={setPlotDialog}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="create-plot-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Plot
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="text-[#2d5016]">Create New Plot</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleCreatePlot} className="space-y-4">
+                        <div>
+                          <Label className="text-[#2d5016]">Farm *</Label>
+                          <select
+                            data-testid="plot-farm-select"
+                            value={plotForm.farm_id}
+                            onChange={(e) => setPlotForm({ ...plotForm, farm_id: e.target.value })}
+                            required
+                            className="w-full border border-[#8bc34a]/40 rounded-md p-2"
+                          >
+                            <option value="">Select Farm</option>
+                            {farms.map(farm => (
+                              <option key={farm.id} value={farm.id}>{farm.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Plot Name *</Label>
+                          <Input
+                            data-testid="plot-name-input"
+                            value={plotForm.name}
+                            onChange={(e) => setPlotForm({ ...plotForm, name: e.target.value })}
+                            required
+                            placeholder="Plot A1"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Area (sqm)</Label>
+                          <Input
+                            type="number"
+                            value={plotForm.area_sqm}
+                            onChange={(e) => setPlotForm({ ...plotForm, area_sqm: e.target.value })}
+                            placeholder="1000"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Soil Type</Label>
+                          <Input
+                            value={plotForm.soil_type}
+                            onChange={(e) => setPlotForm({ ...plotForm, soil_type: e.target.value })}
+                            placeholder="Loamy"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <Button type="submit" data-testid="submit-plot-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                          Create Plot
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[#2d5016]">Name</TableHead>
+                      <TableHead className="text-[#2d5016]">Farm</TableHead>
+                      <TableHead className="text-[#2d5016]">Area (sqm)</TableHead>
+                      <TableHead className="text-[#2d5016]">Soil Type</TableHead>
+                      <TableHead className="text-[#2d5016]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plots.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-[#5a7c3b] py-8">
+                          No plots yet. Create plots to divide your farms.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      plots.map((plot) => {
+                        const farm = farms.find(f => f.id === plot.farm_id);
+                        return (
+                          <TableRow key={plot.id} data-testid={`plot-row-${plot.id}`}>
+                            <TableCell className="font-medium text-[#2d5016]">{plot.name}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{farm?.name || '-'}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{plot.area_sqm || '-'}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{plot.soil_type || '-'}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeletePlot(plot.id)}
+                                data-testid={`delete-plot-${plot.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* PLANTS TAB */}
+          <TabsContent value="plants">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-2xl text-[#2d5016]">Plant Catalog</CardTitle>
+                    <CardDescription className="text-[#5a7c3b]">Manage plant species and their requirements</CardDescription>
+                  </div>
+                  <Dialog open={plantDialog} onOpenChange={setPlantDialog}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="create-plant-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Plant
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="text-[#2d5016]">Add Plant Species</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleCreatePlant} className="space-y-4">
+                        <div>
+                          <Label className="text-[#2d5016]">Plant Name *</Label>
+                          <Input
+                            data-testid="plant-name-input"
+                            value={plantForm.name}
+                            onChange={(e) => setPlantForm({ ...plantForm, name: e.target.value })}
+                            required
+                            placeholder="Tomato"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Scientific Name</Label>
+                          <Input
+                            value={plantForm.scientific_name}
+                            onChange={(e) => setPlantForm({ ...plantForm, scientific_name: e.target.value })}
+                            placeholder="Solanum lycopersicum"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Growth Cycle</Label>
+                          <select
+                            value={plantForm.growth_cycle_id}
+                            onChange={(e) => setPlantForm({ ...plantForm, growth_cycle_id: e.target.value })}
+                            className="w-full border border-[#8bc34a]/40 rounded-md p-2"
+                          >
+                            <option value="">Select Growth Cycle</option>
+                            {growthCycles.map(cycle => (
+                              <option key={cycle.id} value={cycle.id}>
+                                {cycle.total_growth_days} days total
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Requirements</Label>
+                          <select
+                            value={plantForm.requirement_id}
+                            onChange={(e) => setPlantForm({ ...plantForm, requirement_id: e.target.value })}
+                            className="w-full border border-[#8bc34a]/40 rounded-md p-2"
+                          >
+                            <option value="">Select Requirements</option>
+                            {plantRequirements.map((req, idx) => (
+                              <option key={req.id} value={req.id}>
+                                Requirement Set {idx + 1}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Notes</Label>
+                          <Textarea
+                            value={plantForm.notes}
+                            onChange={(e) => setPlantForm({ ...plantForm, notes: e.target.value })}
+                            placeholder="Additional notes..."
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <Button type="submit" data-testid="submit-plant-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                          Create Plant
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[#2d5016]">Name</TableHead>
+                      <TableHead className="text-[#2d5016]">Scientific Name</TableHead>
+                      <TableHead className="text-[#2d5016]">Notes</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plants.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-[#5a7c3b] py-8">
+                          No plants yet. Add plant species to your catalog.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      plants.map((plant) => (
+                        <TableRow key={plant.id} data-testid={`plant-row-${plant.id}`}>
+                          <TableCell className="font-medium text-[#2d5016]">{plant.name}</TableCell>
+                          <TableCell className="text-[#5a7c3b]">{plant.scientific_name || '-'}</TableCell>
+                          <TableCell className="text-[#5a7c3b] text-sm">{plant.notes || '-'}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* PLANT INSTANCES TAB */}
+          <TabsContent value="instances">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-2xl text-[#2d5016]">Plant Instances</CardTitle>
+                    <CardDescription className="text-[#5a7c3b]">Track actual plantings and growth progress</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => fetchPlantInstances()}
+                      variant="outline"
+                      className="border-[#8bc34a] text-[#558b2f]"
+                    >
+                      Refresh
+                    </Button>
+                    <Dialog open={instanceDialog} onOpenChange={setInstanceDialog}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="create-instance-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Plant Now
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle className="text-[#2d5016]">Create Plant Instance</DialogTitle>
+                          <DialogDescription className="text-[#5a7c3b]">Record a new planting and auto-generate schedules</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateInstance} className="space-y-4">
+                          <div>
+                            <Label className="text-[#2d5016]">Plot *</Label>
+                            <select
+                              data-testid="instance-plot-select"
+                              value={instanceForm.plot_id}
+                              onChange={(e) => setInstanceForm({ ...instanceForm, plot_id: e.target.value })}
+                              required
+                              className="w-full border border-[#8bc34a]/40 rounded-md p-2"
+                            >
+                              <option value="">Select Plot</option>
+                              {plots.map(plot => (
+                                <option key={plot.id} value={plot.id}>{plot.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-[#2d5016]">Plant Species *</Label>
+                            <select
+                              data-testid="instance-plant-select"
+                              value={instanceForm.plant_id}
+                              onChange={(e) => setInstanceForm({ ...instanceForm, plant_id: e.target.value })}
+                              required
+                              className="w-full border border-[#8bc34a]/40 rounded-md p-2"
+                            >
+                              <option value="">Select Plant</option>
+                              {plants.map(plant => (
+                                <option key={plant.id} value={plant.id}>{plant.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label className="text-[#2d5016]">Planted On *</Label>
+                            <Input
+                              data-testid="instance-date-input"
+                              type="date"
+                              value={instanceForm.planted_on}
+                              onChange={(e) => setInstanceForm({ ...instanceForm, planted_on: e.target.value })}
+                              required
+                              className="border-[#8bc34a]/40"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[#2d5016]">Count *</Label>
+                            <Input
+                              type="number"
+                              value={instanceForm.count}
+                              onChange={(e) => setInstanceForm({ ...instanceForm, count: parseInt(e.target.value) })}
+                              required
+                              min="1"
+                              className="border-[#8bc34a]/40"
+                            />
+                          </div>
+                          <Button type="submit" data-testid="submit-instance-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                            Create Instance
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[#2d5016]">Plant</TableHead>
+                      <TableHead className="text-[#2d5016]">Plot</TableHead>
+                      <TableHead className="text-[#2d5016]">Planted On</TableHead>
+                      <TableHead className="text-[#2d5016]">Count</TableHead>
+                      <TableHead className="text-[#2d5016]">Growth Stage</TableHead>
+                      <TableHead className="text-[#2d5016]">Days</TableHead>
+                      <TableHead className="text-[#2d5016]">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plantInstances.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-[#5a7c3b] py-8">
+                          No plant instances yet. Create your first planting.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      plantInstances.map((instance) => {
+                        const plant = plants.find(p => p.id === instance.plant_id);
+                        const plot = plots.find(p => p.id === instance.plot_id);
+                        return (
+                          <TableRow key={instance.id} data-testid={`instance-row-${instance.id}`}>
+                            <TableCell className="font-medium text-[#2d5016]">{plant?.name || '-'}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{plot?.name || '-'}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{instance.planted_on}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{instance.count}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                instance.current_growth_stage === 'germination' ? 'bg-yellow-100 text-yellow-800' :
+                                instance.current_growth_stage === 'vegetative' ? 'bg-green-100 text-green-800' :
+                                instance.current_growth_stage === 'flowering' ? 'bg-pink-100 text-pink-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                                {instance.current_growth_stage || 'N/A'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-[#5a7c3b]">{instance.days_since_planting || '-'}</TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                instance.status === 'active' ? 'bg-green-100 text-green-800' :
+                                instance.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {instance.status}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* INVENTORY TAB */}
+          <TabsContent value="inventory">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-2xl text-[#2d5016]">Inventory Management</CardTitle>
+                    <CardDescription className="text-[#5a7c3b]">Track materials used for plant care</CardDescription>
+                  </div>
+                  <Dialog open={inventoryDialog} onOpenChange={setInventoryDialog}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="create-inventory-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="text-[#2d5016]">Add Inventory Item</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleCreateInventory} className="space-y-4">
+                        <div>
+                          <Label className="text-[#2d5016]">Item Name *</Label>
+                          <Input
+                            data-testid="inventory-name-input"
+                            value={inventoryForm.name}
+                            onChange={(e) => setInventoryForm({ ...inventoryForm, name: e.target.value })}
+                            required
+                            placeholder="Water / Panchagavya / Spray"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Unit *</Label>
+                          <Input
+                            value={inventoryForm.unit}
+                            onChange={(e) => setInventoryForm({ ...inventoryForm, unit: e.target.value })}
+                            required
+                            placeholder="ml / l / kg / g"
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Initial Quantity *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={inventoryForm.quantity}
+                            onChange={(e) => setInventoryForm({ ...inventoryForm, quantity: parseFloat(e.target.value) })}
+                            required
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[#2d5016]">Reorder Level</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={inventoryForm.reorder_level}
+                            onChange={(e) => setInventoryForm({ ...inventoryForm, reorder_level: parseFloat(e.target.value) })}
+                            className="border-[#8bc34a]/40"
+                          />
+                        </div>
+                        <Button type="submit" data-testid="submit-inventory-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                          Add Item
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[#2d5016]">Item Name</TableHead>
+                      <TableHead className="text-[#2d5016]">Unit</TableHead>
+                      <TableHead className="text-[#2d5016]">Quantity</TableHead>
+                      <TableHead className="text-[#2d5016]">Reorder Level</TableHead>
+                      <TableHead className="text-[#2d5016]">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventory.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-[#5a7c3b] py-8">
+                          No inventory items. Add materials to track usage.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      inventory.map((item) => {
+                        const isLowStock = item.quantity <= item.reorder_level;
+                        return (
+                          <TableRow key={item.id} data-testid={`inventory-row-${item.id}`} className={isLowStock ? 'bg-red-50' : ''}>
+                            <TableCell className="font-medium text-[#2d5016]">{item.name}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{item.unit}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{item.quantity.toFixed(2)}</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{item.reorder_level.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {isLowStock ? (
+                                <span className="flex items-center text-red-600 text-sm font-medium">
+                                  <AlertTriangle className="w-4 h-4 mr-1" />
+                                  Low Stock
+                                </span>
+                              ) : (
+                                <span className="flex items-center text-green-600 text-sm font-medium">
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  In Stock
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* SETUP TAB (Growth Cycles & Requirements) */}
+          <TabsContent value="setup">
+            <div className="space-y-6">
+              {/* Growth Cycles */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-2xl text-[#2d5016]">Growth Cycles</CardTitle>
+                      <CardDescription className="text-[#5a7c3b]">Define plant lifecycle durations</CardDescription>
+                    </div>
+                    <Dialog open={cycleDialog} onOpenChange={setCycleDialog}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="create-cycle-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Cycle
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle className="text-[#2d5016]">Create Growth Cycle</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateCycle} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-[#2d5016]">Germination (days)</Label>
+                              <Input
+                                type="number"
+                                value={cycleForm.germination_days}
+                                onChange={(e) => setCycleForm({ ...cycleForm, germination_days: parseInt(e.target.value) })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016]">Vegetative (days)</Label>
+                              <Input
+                                type="number"
+                                value={cycleForm.vegetative_days}
+                                onChange={(e) => setCycleForm({ ...cycleForm, vegetative_days: parseInt(e.target.value) })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016]">Flowering (days)</Label>
+                              <Input
+                                type="number"
+                                value={cycleForm.flowering_days}
+                                onChange={(e) => setCycleForm({ ...cycleForm, flowering_days: parseInt(e.target.value) })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016]">Fruiting (days)</Label>
+                              <Input
+                                type="number"
+                                value={cycleForm.fruiting_days}
+                                onChange={(e) => setCycleForm({ ...cycleForm, fruiting_days: parseInt(e.target.value) })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-[#2d5016]">Total Growth Days *</Label>
+                            <Input
+                              type="number"
+                              value={cycleForm.total_growth_days}
+                              onChange={(e) => setCycleForm({ ...cycleForm, total_growth_days: parseInt(e.target.value) })}
+                              required
+                              className="border-[#8bc34a]/40"
+                            />
+                          </div>
+                          <Button type="submit" data-testid="submit-cycle-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                            Create Cycle
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[#2d5016]">Germination</TableHead>
+                        <TableHead className="text-[#2d5016]">Vegetative</TableHead>
+                        <TableHead className="text-[#2d5016]">Flowering</TableHead>
+                        <TableHead className="text-[#2d5016]">Fruiting</TableHead>
+                        <TableHead className="text-[#2d5016]">Total Days</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {growthCycles.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-[#5a7c3b] py-8">
+                            No growth cycles defined.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        growthCycles.map((cycle) => (
+                          <TableRow key={cycle.id} data-testid={`cycle-row-${cycle.id}`}>
+                            <TableCell className="text-[#5a7c3b]">{cycle.germination_days} days</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{cycle.vegetative_days} days</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{cycle.flowering_days} days</TableCell>
+                            <TableCell className="text-[#5a7c3b]">{cycle.fruiting_days} days</TableCell>
+                            <TableCell className="font-medium text-[#2d5016]">{cycle.total_growth_days} days</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Plant Requirements */}
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="text-2xl text-[#2d5016]">Plant Requirements</CardTitle>
+                      <CardDescription className="text-[#5a7c3b]">Define care requirements for plants</CardDescription>
+                    </div>
+                    <Dialog open={requirementDialog} onOpenChange={setRequirementDialog}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="create-requirement-button" className="bg-[#558b2f] hover:bg-[#33691e]">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Requirements
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="text-[#2d5016]">Create Plant Requirements</DialogTitle>
+                          <DialogDescription className="text-[#5a7c3b]">All requirements in one set</DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleCreateRequirement} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-[#2d5016] text-sm">Water Min (ml)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={requirementForm.water_min_ml}
+                                onChange={(e) => setRequirementForm({ ...requirementForm, water_min_ml: parseFloat(e.target.value) || 0 })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016] text-sm">Water Max (ml)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={requirementForm.water_max_ml}
+                                onChange={(e) => setRequirementForm({ ...requirementForm, water_max_ml: parseFloat(e.target.value) || 0 })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016] text-sm">Panchagavya (l/month)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={requirementForm.panchagavya_l_per_month}
+                                onChange={(e) => setRequirementForm({ ...requirementForm, panchagavya_l_per_month: parseFloat(e.target.value) || 0 })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[#2d5016] text-sm">Vermicompost (ml/month)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={requirementForm.vermicompost_ml_monthly}
+                                onChange={(e) => setRequirementForm({ ...requirementForm, vermicompost_ml_monthly: parseFloat(e.target.value) || 0 })}
+                                className="border-[#8bc34a]/40"
+                              />
+                            </div>
+                          </div>
+                          <p className="text-xs text-[#5a7c3b]">Note: All fields are optional. Fill only required values.</p>
+                          <Button type="submit" data-testid="submit-requirement-button" className="w-full bg-[#558b2f] hover:bg-[#33691e]">
+                            Create Requirements
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-[#5a7c3b]">
+                    {plantRequirements.length} requirement set(s) created. Each set defines all care requirements for a plant species.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
