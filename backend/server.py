@@ -408,6 +408,23 @@ async def list_requirements(current_user: dict = Depends(get_current_user)):
     response = supabase.table("plant_requirements").select("*").execute()
     return response.data
 
+@app.post("/api/plants", response_model=PlantResponse)
+async def create_plant(plant: PlantCreate, current_user: dict = Depends(require_role(["owner"]))):
+    response = supabase.table("plants").insert(plant.model_dump()).execute()
+    return response.data[0]
+
+@app.get("/api/plants", response_model=List[PlantResponse])
+async def list_plants(current_user: dict = Depends(get_current_user)):
+    response = supabase.table("plants").select("*").execute()
+    return response.data
+
+@app.get("/api/plants/{plant_id}", response_model=PlantResponse)
+async def get_plant(plant_id: str, current_user: dict = Depends(get_current_user)):
+    response = supabase.table("plants").select("*").eq("id", plant_id).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    return response.data[0]
+
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     stats = {}
