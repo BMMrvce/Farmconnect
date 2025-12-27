@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Trash2, Package, Leaf, Tractor, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Package, Leaf, Tractor, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
