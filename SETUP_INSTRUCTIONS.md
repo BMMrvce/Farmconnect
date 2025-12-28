@@ -7,7 +7,7 @@
 1. Go to your Supabase Dashboard: https://supabase.com/dashboard/project/bzdrmvnsaijtvbhairkc
 2. Navigate to **SQL Editor** in the left sidebar
 3. Click **New Query**
-4. Copy the entire content from `/app/database_schema.sql`
+4. Copy the entire content from `./database_schema.sql` (project root)
 5. Paste it into the SQL editor
 6. Click **Run** to execute the schema
 
@@ -34,23 +34,52 @@ Go to **Table Editor** in Supabase Dashboard and verify that all these tables ex
 
 ### Step 3: Install Backend Dependencies
 
-Run the following command to install required Python packages:
+On Debian/Ubuntu, first ensure venv support:
 
 ```bash
-cd /app/backend
-pip install supabase postgrest-py && pip freeze > requirements.txt
+sudo apt update
+sudo apt install python3.12-venv
+```
+
+Then install backend dependencies in a virtual environment:
+
+```bash
+cd ./backend
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
 ### Step 4: Install Frontend Dependencies
 
-No additional dependencies needed - already installed.
+Install Node dependencies (requires Node 18+ and Yarn):
+
+```bash
+cd ./frontend
+yarn install
+```
 
 ### Step 5: Start the Application
 
-Restart both backend and frontend:
+Use the provided quick-start script from project root:
 
 ```bash
-sudo supervisorctl restart backend frontend
+chmod +x start.sh
+./start.sh
+```
+
+Or start manually:
+
+```bash
+# Backend
+cd ./backend
+source venv/bin/activate
+python -m uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+# Frontend (new terminal)
+cd ./frontend
+yarn start
 ```
 
 ## Default Accounts

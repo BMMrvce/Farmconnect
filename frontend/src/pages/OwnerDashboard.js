@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import DashboardStats from '@/components/DashboardStats';
+import FarmerManagement from '@/components/FarmerManagement';
+import SubscriberManagement from '@/components/SubscriberManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -283,12 +285,14 @@ const OwnerDashboard = () => {
         </div>
 
         <Tabs defaultValue="farms" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-8 bg-white/50 backdrop-blur-sm border border-[#8bc34a]/20">
+          <TabsList className="grid w-full grid-cols-8 mb-8 bg-white/50 backdrop-blur-sm border border-[#8bc34a]/20">
             <TabsTrigger value="farms" data-testid="farms-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Farms</TabsTrigger>
             <TabsTrigger value="plots" data-testid="plots-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Plots</TabsTrigger>
             <TabsTrigger value="plants" data-testid="plants-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Plants</TabsTrigger>
             <TabsTrigger value="instances" data-testid="instances-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Plant Instances</TabsTrigger>
             <TabsTrigger value="inventory" data-testid="inventory-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Inventory</TabsTrigger>
+            <TabsTrigger value="farmers" data-testid="farmers-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Farmers</TabsTrigger>
+            <TabsTrigger value="subscribers" data-testid="subscribers-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Subscribers</TabsTrigger>
             <TabsTrigger value="setup" data-testid="setup-tab" className="data-[state=active]:bg-[#558b2f] data-[state=active]:text-white">Setup</TabsTrigger>
           </TabsList>
 
@@ -1109,6 +1113,16 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* FARMERS TAB */}
+          <TabsContent value="farmers">
+            <FarmerManagement />
+          </TabsContent>
+
+          {/* SUBSCRIBERS TAB */}
+          <TabsContent value="subscribers">
+            <SubscriberManagement />
           </TabsContent>
         </Tabs>
       </div>

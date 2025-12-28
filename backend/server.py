@@ -8,11 +8,13 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 from supabase import create_client, Client
 from decimal import Decimal
 import logging
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
@@ -28,16 +30,21 @@ security = HTTPBearer()
 
 app = FastAPI(title="Farm Management System", version="1.0.0")
 
+cors_origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+allow_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info(f"CORS allowed origins: {allow_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+pass
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -204,6 +211,24 @@ class FarmerAssignmentCreate(BaseModel):
     farmer_id: str
     plot_id: str
 
+class FarmerAssignmentResponse(BaseModel):
+    id: str
+    farmer_id: str
+    plot_id: str
+    assigned_at: str
+
+class PasswordResetRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+class CreateFarmerRequest(BaseModel):
+    name: str
+    email: Optional[EmailStr] = None
+
+class CreateSubscriberRequest(BaseModel):
+    name: str
+    email: Optional[EmailStr] = None
+
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
@@ -248,39 +273,57 @@ def require_role(allowed_roles: List[str]):
 
 @app.post("/api/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    existing = supabase.table("users").select("*").eq("email", user_data.email).execute()
-    if existing.data:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    hashed_password = hash_password(user_data.password)
-    new_user = {
-        "email": user_data.email,
-        "password_hash": hashed_password,
-        "name": user_data.name,
-        "role": user_data.role
-    }
-    
-    response = supabase.table("users").insert(new_user).execute()
-    user = response.data[0]
-    
-    access_token = create_access_token(data={"sub": user["id"], "role": user["role"]})
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        existing = supabase.table("users").select("*").eq("email", user_data.email).execute()
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        hashed_password = hash_password(user_data.password)
+        new_user = {
+            "email": user_data.email,
+            "password_hash": hashed_password,
+            "name": user_data.name,
+            "role": user_data.role
+        }
+        
+        response = supabase.table("users").insert(new_user).execute()
+        if getattr(response, "error", None):
+            logger.error(f"Supabase error on register: {response.error}")
+            raise HTTPException(status_code=500, detail="Registration failed")
+        user = response.data[0]
+        
+        access_token = create_access_token(data={"sub": user["id"], "role": user["role"]})
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error in register: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    response = supabase.table("users").select("*").eq("email", credentials.email).execute()
-    if not response.data:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    user = response.data[0]
-    
-    if not verify_password(credentials.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    access_token = create_access_token(data={"sub": user["id"], "role": user["role"]})
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        response = supabase.table("users").select("*").eq("email", credentials.email).execute()
+        if getattr(response, "error", None):
+            logger.error(f"Supabase error on login select: {response.error}")
+            raise HTTPException(status_code=500, detail="Authentication backend error")
+        if not response.data:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        user = response.data[0]
+        
+        if not verify_password(credentials.password, user["password_hash"]):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        access_token = create_access_token(data={"sub": user["id"], "role": user["role"]})
+        
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Unexpected error in login: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -290,6 +333,266 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         name=current_user.get("name"),
         role=current_user["role"]
     )
+
+# ==================== PASSWORD RESET ====================
+
+@app.post("/api/auth/reset-password")
+async def reset_password(reset_data: PasswordResetRequest, current_user: dict = Depends(get_current_user)):
+    """Reset password - requires current password verification"""
+    if not verify_password(reset_data.current_password, current_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    new_password_hash = hash_password(reset_data.new_password)
+    supabase.table("users").update({"password_hash": new_password_hash}).eq("id", current_user["id"]).execute()
+    
+    return {"message": "Password reset successfully"}
+
+@app.get("/api/auth/check-default-password")
+async def check_default_password(current_user: dict = Depends(get_current_user)):
+    """Check if user is still using default password"""
+    is_default = verify_password("12345678", current_user["password_hash"])
+    return {"is_default_password": is_default, "must_reset": is_default}
+
+# ==================== FARMER MANAGEMENT ====================
+
+@app.post("/api/farmers")
+async def create_farmer(farmer_data: CreateFarmerRequest, current_user: dict = Depends(require_role(["owner"]))):
+    """Create a new farmer account with auto-generated email and default password"""
+    # Generate email from name if not provided
+    if farmer_data.email:
+        email = farmer_data.email
+    else:
+        # Create email from name: "John Doe" -> "johndoe@farm.com"
+        base_email = farmer_data.name.lower().replace(" ", "")
+        email = f"{base_email}@farm.com"
+    
+    # Check if email already exists
+    existing = supabase.table("users").select("*").eq("email", email).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail=f"Email {email} already registered")
+    
+    # Create farmer with default password
+    default_password = "12345678"
+    hashed_password = hash_password(default_password)
+    
+    new_farmer = {
+        "email": email,
+        "password_hash": hashed_password,
+        "name": farmer_data.name,
+        "role": "farmer"
+    }
+    
+    response = supabase.table("users").insert(new_farmer).execute()
+    farmer = response.data[0]
+    
+    return {
+        "id": farmer["id"],
+        "email": farmer["email"],
+        "name": farmer["name"],
+        "role": farmer["role"],
+        "default_password": default_password
+    }
+
+@app.get("/api/farmers")
+async def list_farmers(current_user: dict = Depends(require_role(["owner"]))):
+    """List all farmers"""
+    response = supabase.table("users").select("id, email, name, role, created_at").eq("role", "farmer").execute()
+    return response.data
+
+@app.delete("/api/farmers/{farmer_id}")
+async def delete_farmer(farmer_id: str, current_user: dict = Depends(require_role(["owner"]))):
+    """Delete a farmer account"""
+    farmer = supabase.table("users").select("*").eq("id", farmer_id).eq("role", "farmer").execute()
+    if not farmer.data:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    
+    # Delete farmer assignments first
+    supabase.table("farmer_assignments").delete().eq("farmer_id", farmer_id).execute()
+    
+    # Delete farmer account
+    supabase.table("users").delete().eq("id", farmer_id).execute()
+    return {"message": "Farmer deleted successfully"}
+
+# ==================== SUBSCRIBER MANAGEMENT ====================
+
+@app.post("/api/subscribers")
+async def create_subscriber(subscriber_data: CreateSubscriberRequest, current_user: dict = Depends(require_role(["owner"]))):
+    """Create a new subscriber account with auto-generated email and default password"""
+    # Generate email from name if not provided
+    if subscriber_data.email:
+        email = subscriber_data.email
+    else:
+        # Create email from name: "Jane Smith" -> "janesmith@farm.com"
+        base_email = subscriber_data.name.lower().replace(" ", "")
+        email = f"{base_email}@farm.com"
+    
+    # Check if email already exists
+    existing = supabase.table("users").select("*").eq("email", email).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail=f"Email {email} already registered")
+    
+    # Create subscriber with default password
+    default_password = "12345678"
+    hashed_password = hash_password(default_password)
+    
+    new_subscriber = {
+        "email": email,
+        "password_hash": hashed_password,
+        "name": subscriber_data.name,
+        "role": "subscriber"
+    }
+    
+    response = supabase.table("users").insert(new_subscriber).execute()
+    subscriber = response.data[0]
+    
+    return {
+        "id": subscriber["id"],
+        "email": subscriber["email"],
+        "name": subscriber["name"],
+        "role": subscriber["role"],
+        "default_password": default_password
+    }
+
+@app.get("/api/subscribers")
+async def list_subscribers(current_user: dict = Depends(require_role(["owner"]))):
+    """List all subscribers"""
+    response = supabase.table("users").select("id, email, name, role, created_at").eq("role", "subscriber").execute()
+    return response.data
+
+@app.delete("/api/subscribers/{subscriber_id}")
+async def delete_subscriber(subscriber_id: str, current_user: dict = Depends(require_role(["owner"]))):
+    """Delete a subscriber account"""
+    subscriber = supabase.table("users").select("*").eq("id", subscriber_id).eq("role", "subscriber").execute()
+    if not subscriber.data:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    
+    # Delete subscriptions first
+    supabase.table("subscriptions").delete().eq("subscriber_id", subscriber_id).execute()
+    
+    # Delete subscriber account
+    supabase.table("users").delete().eq("id", subscriber_id).execute()
+    return {"message": "Subscriber deleted successfully"}
+
+# ==================== FARMER ASSIGNMENTS ====================
+
+@app.post("/api/farmer-assignments", response_model=FarmerAssignmentResponse)
+async def assign_farmer_to_plot(assignment: FarmerAssignmentCreate, current_user: dict = Depends(require_role(["owner"]))):
+    """Assign a farmer to a plot"""
+    # Verify farmer exists
+    farmer = supabase.table("users").select("*").eq("id", assignment.farmer_id).eq("role", "farmer").execute()
+    if not farmer.data:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+    
+    # Verify plot exists and belongs to owner
+    plot = supabase.table("plots").select("farm_id").eq("id", assignment.plot_id).execute()
+    if not plot.data:
+        raise HTTPException(status_code=404, detail="Plot not found")
+    
+    farm = supabase.table("farms").select("owner_id").eq("id", plot.data[0]["farm_id"]).execute()
+    if not farm.data or farm.data[0]["owner_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if assignment already exists
+    existing = supabase.table("farmer_assignments").select("*").eq("farmer_id", assignment.farmer_id).eq("plot_id", assignment.plot_id).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail="Farmer already assigned to this plot")
+    
+    # Create assignment
+    new_assignment = {
+        "farmer_id": assignment.farmer_id,
+        "plot_id": assignment.plot_id
+    }
+    response = supabase.table("farmer_assignments").insert(new_assignment).execute()
+    return response.data[0]
+
+@app.get("/api/farmer-assignments")
+async def list_farmer_assignments(plot_id: Optional[str] = None, current_user: dict = Depends(require_role(["owner"]))):
+    """List farmer assignments, optionally filtered by plot"""
+    query = supabase.table("farmer_assignments").select("*")
+    if plot_id:
+        query = query.eq("plot_id", plot_id)
+    response = query.execute()
+    return response.data
+
+@app.delete("/api/farmer-assignments/{assignment_id}")
+async def remove_farmer_assignment(assignment_id: str, current_user: dict = Depends(require_role(["owner"]))):
+    """Remove a farmer assignment"""
+    assignment = supabase.table("farmer_assignments").select("*").eq("id", assignment_id).execute()
+    if not assignment.data:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    supabase.table("farmer_assignments").delete().eq("id", assignment_id).execute()
+    return {"message": "Farmer assignment removed successfully"}
+
+# ==================== PLOT SUBSCRIPTIONS ====================
+
+@app.post("/api/subscriptions")
+async def create_subscription(subscription: SubscriptionCreate, current_user: dict = Depends(require_role(["owner"]))):
+    """Owner creates a subscription for a subscriber"""
+    # This endpoint expects subscriber_id in the request body
+    pass
+
+@app.post("/api/subscriptions/assign")
+async def assign_subscriber_to_plot(plot_id: str, subscriber_id: str, current_user: dict = Depends(require_role(["owner"]))):
+    """Assign a subscriber to a plot"""
+    # Verify subscriber exists
+    subscriber = supabase.table("users").select("*").eq("id", subscriber_id).eq("role", "subscriber").execute()
+    if not subscriber.data:
+        raise HTTPException(status_code=404, detail="Subscriber not found")
+    
+    # Verify plot exists and belongs to owner
+    plot = supabase.table("plots").select("farm_id").eq("id", plot_id).execute()
+    if not plot.data:
+        raise HTTPException(status_code=404, detail="Plot not found")
+    
+    farm = supabase.table("farms").select("owner_id").eq("id", plot.data[0]["farm_id"]).execute()
+    if not farm.data or farm.data[0]["owner_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Check if subscription already exists
+    existing = supabase.table("subscriptions").select("*").eq("subscriber_id", subscriber_id).eq("plot_id", plot_id).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail="Subscriber already assigned to this plot")
+    
+    # Create subscription
+    new_subscription = {
+        "subscriber_id": subscriber_id,
+        "plot_id": plot_id,
+        "status": "active"
+    }
+    response = supabase.table("subscriptions").insert(new_subscription).execute()
+    return response.data[0]
+
+@app.get("/api/subscriptions")
+async def list_subscriptions(plot_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """List subscriptions.
+    - Owners: see all (optionally filter by plot_id)
+    - Subscribers: see only their own subscriptions (optionally filter by plot_id)
+    """
+    if current_user["role"] == "owner":
+        query = supabase.table("subscriptions").select("*")
+        if plot_id:
+            query = query.eq("plot_id", plot_id)
+        response = query.execute()
+        return response.data
+    elif current_user["role"] == "subscriber":
+        query = supabase.table("subscriptions").select("*").eq("subscriber_id", current_user["id"]) 
+        if plot_id:
+            query = query.eq("plot_id", plot_id)
+        response = query.execute()
+        return response.data
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+@app.delete("/api/subscriptions/{subscription_id}")
+async def remove_subscription(subscription_id: str, current_user: dict = Depends(require_role(["owner"]))):
+    """Remove a subscription"""
+    subscription = supabase.table("subscriptions").select("*").eq("id", subscription_id).execute()
+    if not subscription.data:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    supabase.table("subscriptions").delete().eq("id", subscription_id).execute()
+    return {"message": "Subscription removed successfully"}
 
 @app.post("/api/farms", response_model=FarmResponse)
 async def create_farm(farm: FarmCreate, current_user: dict = Depends(require_role(["owner"]))):
@@ -551,6 +854,82 @@ async def get_low_stock(current_user: dict = Depends(require_role(["owner"]))):
     response = supabase.table("inventory").select("*").execute()
     low_stock = [item for item in response.data if item["quantity"] <= item["reorder_level"]]
     return low_stock
+
+# ==================== SCHEDULES (TASKS) ====================
+
+@app.get("/api/schedules", response_model=List[ScheduleResponse])
+async def list_schedules(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """List schedules.
+    - Owners: see all schedules; filter by status if provided
+    - Farmers: see schedules only for plant instances in their assigned plots; filter by status if provided
+    """
+    if current_user["role"] == "owner":
+        query = supabase.table("schedules").select("*")
+        if status:
+            query = query.eq("status", status)
+        response = query.execute()
+        return response.data
+    elif current_user["role"] == "farmer":
+        assignments = supabase.table("farmer_assignments").select("plot_id").eq("farmer_id", current_user["id"]).execute()
+        if not assignments.data:
+            return []
+        plot_ids = [a["plot_id"] for a in assignments.data]
+        instances = supabase.table("plant_instances").select("id").in_("plot_id", plot_ids).execute()
+        if not instances.data:
+            return []
+        instance_ids = [i["id"] for i in instances.data]
+        query = supabase.table("schedules").select("*").in_("plant_instance_id", instance_ids)
+        if status:
+            query = query.eq("status", status)
+        response = query.execute()
+        return response.data
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+@app.get("/api/schedules/today", response_model=List[ScheduleResponse])
+async def list_schedules_today(current_user: dict = Depends(get_current_user)):
+    """List today's schedules.
+    - Owners: all schedules for today
+    - Farmers: only schedules for instances in assigned plots for today
+    """
+    today = str(date.today())
+    if current_user["role"] == "owner":
+        response = supabase.table("schedules").select("*").eq("scheduled_for", today).execute()
+        return response.data
+    elif current_user["role"] == "farmer":
+        assignments = supabase.table("farmer_assignments").select("plot_id").eq("farmer_id", current_user["id"]).execute()
+        if not assignments.data:
+            return []
+        plot_ids = [a["plot_id"] for a in assignments.data]
+        instances = supabase.table("plant_instances").select("id").in_("plot_id", plot_ids).execute()
+        if not instances.data:
+            return []
+        instance_ids = [i["id"] for i in instances.data]
+        response = supabase.table("schedules").select("*").in_("plant_instance_id", instance_ids).eq("scheduled_for", today).execute()
+        return response.data
+    else:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+@app.post("/api/schedules/{task_id}/complete")
+async def complete_schedule_task(task_id: str, body: TaskCompleteRequest, current_user: dict = Depends(get_current_user)):
+    """Mark a schedule task as completed. Farmers can complete only their assigned tasks; owners can complete any."""
+    task_res = supabase.table("schedules").select("*").eq("id", task_id).execute()
+    if not task_res.data:
+        raise HTTPException(status_code=404, detail="Task not found")
+    task = task_res.data[0]
+
+    if current_user["role"] == "farmer":
+        # verify this task belongs to a plot assigned to the farmer
+        inst_res = supabase.table("plant_instances").select("plot_id").eq("id", task["plant_instance_id"]).execute()
+        if not inst_res.data:
+            raise HTTPException(status_code=404, detail="Plant instance not found")
+        plot_id = inst_res.data[0]["plot_id"]
+        assign_res = supabase.table("farmer_assignments").select("*").eq("farmer_id", current_user["id"]).eq("plot_id", plot_id).execute()
+        if not assign_res.data:
+            raise HTTPException(status_code=403, detail="Not authorized to complete this task")
+
+    supabase.table("schedules").update({"status": "completed", "completion_notes": body.notes}).eq("id", task_id).execute()
+    return {"message": "Task completed"}
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):

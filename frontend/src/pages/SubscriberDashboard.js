@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
 import DashboardStats from '@/components/DashboardStats';
+import PasswordResetPrompt from '@/components/PasswordResetPrompt';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -63,6 +64,7 @@ const SubscriberDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#e8f5e9] to-[#f1f8e9]">
       <Navbar />
+      <PasswordResetPrompt />
       
       <div className="container mx-auto px-4 py-8">
         {success && (
